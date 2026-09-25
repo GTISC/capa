@@ -80,6 +80,8 @@ jobs:
       run: |
         pip install -r requirements.txt
         pip install -e .[dev,scripts]
+    - name: Add GTISC benign rule fixture to lint samples
+      run: cp rules/in-house/fixtures/local_group_capability.exe tests/data/
     - name: Run rule linter
       run: python scripts/lint.py rules/
 
