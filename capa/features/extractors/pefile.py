@@ -20,8 +20,18 @@ import pefile
 
 import capa.features.extractors.common
 import capa.features.extractors.helpers
+import capa.features.extractors.pe_structures
 from capa.features.file import Export, Import, Section
-from capa.features.common import OS, ARCH_I386, FORMAT_PE, ARCH_AMD64, OS_WINDOWS, Arch, Format, Characteristic
+from capa.features.common import (
+    OS,
+    ARCH_I386,
+    FORMAT_PE,
+    ARCH_AMD64,
+    OS_WINDOWS,
+    Arch,
+    Format,
+    Characteristic,
+)
 from capa.features.address import NO_ADDRESS, FileOffsetAddress, AbsoluteVirtualAddress
 from capa.features.extractors.base_extractor import SampleHashes, StaticFeatureExtractor
 
@@ -31,6 +41,10 @@ logger = logging.getLogger(__name__)
 def extract_file_embedded_pe(buf, **kwargs):
     for offset, _ in capa.features.extractors.helpers.carve_pe(buf, 1):
         yield Characteristic("embedded pe"), FileOffsetAddress(offset)
+
+
+def extract_file_structural_pe(buf, **kwargs):
+    yield from capa.features.extractors.pe_structures.extract_features(buf)
 
 
 def extract_file_export_names(pe, **kwargs):
@@ -51,10 +65,16 @@ def extract_file_export_names(pe, **kwargs):
 
             else:
                 try:
-                    forwarded_name = export.forwarder.partition(b"\x00")[0].decode("ascii")
+                    forwarded_name = export.forwarder.partition(b"\x00")[0].decode(
+                        "ascii"
+                    )
                 except UnicodeDecodeError:
                     continue
-                forwarded_name = capa.features.extractors.helpers.reformat_forwarded_export_name(forwarded_name)
+                forwarded_name = (
+                    capa.features.extractors.helpers.reformat_forwarded_export_name(
+                        forwarded_name
+                    )
+                )
                 va = base_address + export.address
                 yield Export(forwarded_name), AbsoluteVirtualAddress(va)
                 yield Characteristic("forwarded export"), AbsoluteVirtualAddress(va)
@@ -88,7 +108,9 @@ def extract_file_import_names(pe, **kwargs):
                     except UnicodeDecodeError:
                         continue
 
-                for name in capa.features.extractors.helpers.generate_symbols(modname, impname, include_dll=True):
+                for name in capa.features.extractors.helpers.generate_symbols(
+                    modname, impname, include_dll=True
+                ):
                     yield Import(name), AbsoluteVirtualAddress(imp.address)
 
 
@@ -101,7 +123,10 @@ def extract_file_section_names(pe, **kwargs):
         except UnicodeDecodeError:
             continue
 
-        yield Section(name), AbsoluteVirtualAddress(base_address + section.VirtualAddress)
+        yield (
+            Section(name),
+            AbsoluteVirtualAddress(base_address + section.VirtualAddress),
+        )
 
 
 def extract_file_strings(buf, **kwargs):
@@ -160,6 +185,7 @@ def extract_file_features(pe, buf):
 
 FILE_HANDLERS = (
     extract_file_embedded_pe,
+    extract_file_structural_pe,
     extract_file_export_names,
     extract_file_import_names,
     extract_file_section_names,
@@ -212,25 +238,41 @@ class PefileFeatureExtractor(StaticFeatureExtractor):
         yield from extract_file_features(self.pe, buf)
 
     def get_functions(self):
-        raise NotImplementedError("PefileFeatureExtract can only be used to extract file features")
+        raise NotImplementedError(
+            "PefileFeatureExtract can only be used to extract file features"
+        )
 
     def extract_function_features(self, fh):
-        raise NotImplementedError("PefileFeatureExtract can only be used to extract file features")
+        raise NotImplementedError(
+            "PefileFeatureExtract can only be used to extract file features"
+        )
 
     def get_basic_blocks(self, fh):
-        raise NotImplementedError("PefileFeatureExtract can only be used to extract file features")
+        raise NotImplementedError(
+            "PefileFeatureExtract can only be used to extract file features"
+        )
 
     def extract_basic_block_features(self, fh, bbh):
-        raise NotImplementedError("PefileFeatureExtract can only be used to extract file features")
+        raise NotImplementedError(
+            "PefileFeatureExtract can only be used to extract file features"
+        )
 
     def get_instructions(self, fh, bbh):
-        raise NotImplementedError("PefileFeatureExtract can only be used to extract file features")
+        raise NotImplementedError(
+            "PefileFeatureExtract can only be used to extract file features"
+        )
 
     def extract_insn_features(self, fh, bbh, ih):
-        raise NotImplementedError("PefileFeatureExtract can only be used to extract file features")
+        raise NotImplementedError(
+            "PefileFeatureExtract can only be used to extract file features"
+        )
 
     def is_library_function(self, addr):
-        raise NotImplementedError("PefileFeatureExtract can only be used to extract file features")
+        raise NotImplementedError(
+            "PefileFeatureExtract can only be used to extract file features"
+        )
 
     def get_function_name(self, addr):
-        raise NotImplementedError("PefileFeatureExtract can only be used to extract file features")
+        raise NotImplementedError(
+            "PefileFeatureExtract can only be used to extract file features"
+        )
