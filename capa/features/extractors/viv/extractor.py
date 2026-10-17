@@ -21,6 +21,7 @@ import viv_utils
 import viv_utils.flirt
 
 import capa.features.extractors.common
+import capa.features.extractors.pe_structures
 import capa.features.extractors.viv.file
 import capa.features.extractors.viv.insn
 import capa.features.extractors.viv.global_
@@ -48,9 +49,15 @@ class VivisectFeatureExtractor(StaticFeatureExtractor):
 
         # pre-compute these because we'll yield them at *every* scope.
         self.global_features: list[tuple[Feature, Address]] = []
-        self.global_features.extend(capa.features.extractors.viv.file.extract_file_format(self.buf))
-        self.global_features.extend(capa.features.extractors.common.extract_os(self.buf, os))
-        self.global_features.extend(capa.features.extractors.viv.global_.extract_arch(self.vw))
+        self.global_features.extend(
+            capa.features.extractors.viv.file.extract_file_format(self.buf)
+        )
+        self.global_features.extend(
+            capa.features.extractors.common.extract_os(self.buf, os)
+        )
+        self.global_features.extend(
+            capa.features.extractors.viv.global_.extract_arch(self.vw)
+        )
 
     def get_base_address(self):
         # assume there is only one file loaded into the vw
@@ -61,15 +68,20 @@ class VivisectFeatureExtractor(StaticFeatureExtractor):
 
     def extract_file_features(self):
         yield from capa.features.extractors.viv.file.extract_features(self.vw, self.buf)
+        yield from capa.features.extractors.pe_structures.extract_features(self.buf)
 
     def get_functions(self) -> Iterator[FunctionHandle]:
         cache: dict[str, Any] = {}
         for va in sorted(self.vw.getFunctions()):
             yield FunctionHandle(
-                address=AbsoluteVirtualAddress(va), inner=viv_utils.Function(self.vw, va), ctx={"cache": cache}
+                address=AbsoluteVirtualAddress(va),
+                inner=viv_utils.Function(self.vw, va),
+                ctx={"cache": cache},
             )
 
-    def extract_function_features(self, fh: FunctionHandle) -> Iterator[tuple[Feature, Address]]:
+    def extract_function_features(
+        self, fh: FunctionHandle
+    ) -> Iterator[tuple[Feature, Address]]:
         yield from capa.features.extractors.viv.function.extract_features(fh)
 
     def get_basic_blocks(self, fh: FunctionHandle) -> Iterator[BBHandle]:
@@ -79,10 +91,14 @@ class VivisectFeatureExtractor(StaticFeatureExtractor):
         for bb in basic_blocks:
             yield BBHandle(address=AbsoluteVirtualAddress(bb.va), inner=bb)
 
-    def extract_basic_block_features(self, fh: FunctionHandle, bbh) -> Iterator[tuple[Feature, Address]]:
+    def extract_basic_block_features(
+        self, fh: FunctionHandle, bbh
+    ) -> Iterator[tuple[Feature, Address]]:
         yield from capa.features.extractors.viv.basicblock.extract_features(fh, bbh)
 
-    def get_instructions(self, fh: FunctionHandle, bbh: BBHandle) -> Iterator[InsnHandle]:
+    def get_instructions(
+        self, fh: FunctionHandle, bbh: BBHandle
+    ) -> Iterator[InsnHandle]:
         bb: viv_utils.BasicBlock = bbh.inner
         instructions = cast(list[envi.Opcode], bb.instructions)
         assert isinstance(instructions, list)
